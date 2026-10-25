@@ -1,0 +1,10 @@
+[
+  "https://www.google.com",
+  "https://github.com",
+  "https://pkg.go.dev/std",
+  "https://httpbin.org/status/200",
+  "https://httpbin.org/status/404",
+  "https://httpbin.org/status/500",
+  "https://httpbin.org/delay/2",
+  "https://this-domain-does-not-exist-12345.com"
+]
