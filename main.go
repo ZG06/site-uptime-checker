@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"text/tabwriter"
 	"time"
@@ -20,7 +21,15 @@ type Result struct {
 
 func main() {
 	filePath := flag.String("f", "urls.json", "a data file containing target URLs")
+	methodFlag := flag.String("m", "GET", "specifies an HTTP request method to check the URLs (HEAD/GET)")
 	flag.Parse()
+
+	method := strings.ToUpper(*methodFlag)
+	// Check the HTTP request method and exit if it isn't GET or HEAD.
+	if method != "GET" && method != "HEAD" {
+		fmt.Println("Unsupported HTTP request method. Use HEAD or GET")
+		os.Exit(1)
+	}
 
 	data, err := urlparser.ReadFile(*filePath)
 	if err != nil {
@@ -42,7 +51,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			results <- checkURL(url)
+			results <- checkURL(url, method)
 		}()
 	}
 
@@ -76,12 +85,23 @@ func main() {
 	w.Flush()
 }
 
-func checkURL(url string) Result {
+func checkURL(url, method string) Result {
 	var result Result
+	// Save
 	result.URL = url
 
+	// Create a request with the specified method
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		result.Err = err
+		return result
+	}
+
+	// Start the timer.
 	startTime := time.Now()
-	res, err := http.Get(url)
+	// Execute the HTTP request.
+	res, err := http.DefaultClient.Do(req)
+	// Stop the timer and calculate how long it took to execute the request.
 	result.Latency = time.Since(startTime).Round(time.Millisecond)
 
 	if err != nil {
@@ -89,8 +109,10 @@ func checkURL(url string) Result {
 		return result
 	}
 
+	// Close the *http.Response body.
 	defer res.Body.Close()
 
+	// Save the status code from the response.
 	result.StatusCode = res.StatusCode
 
 	return result
