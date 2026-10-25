@@ -47,14 +47,28 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	// Create a semaphore channel to allocate N 0-byte slots
+	// to only allow N goroutines at a time.
+	var sem = make(chan struct{}, 10)
+
+	// Spawn worker goroutines.
 	for _, url := range urls {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
+			// Acquire slot (blocks until space is available).
+			sem <- struct{}{}
+			// Release slot at the end of the goroutine.
+			// Using this instead of just <-sem under checkURL, because it's guaranteed
+			// to run, even if checkURL panics.
+			defer func() { <-sem }()
+
 			results <- checkURL(url, method)
 		}()
 	}
 
+	// Close goroutines
 	go func() {
 		wg.Wait()
 		close(results)
