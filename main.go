@@ -20,11 +20,13 @@ type Result struct {
 }
 
 var maxConcurrency = 100
+var maxTimeout = 15
 
 func main() {
 	filePath := flag.String("f", "urls.json", "a data file containing target URLs")
 	methodFlag := flag.String("m", "GET", "specifies an HTTP request method to check the URLs (HEAD/GET)")
 	concurrency := flag.Int("c", 10, fmt.Sprintf("maximum number of concurrent HTTP checks (1-%d)", maxConcurrency))
+	timeout := flag.Int("t", 5, fmt.Sprintf("timeout for HTTP requests in seconds (1-%d)", maxTimeout))
 	flag.Parse()
 
 	method := strings.ToUpper(*methodFlag)
@@ -36,6 +38,11 @@ func main() {
 
 	if *concurrency <= 0 || *concurrency > maxConcurrency {
 		fmt.Printf("Concurrency limit (-c) must be between 1 and %d\n", maxConcurrency)
+		os.Exit(1)
+	}
+
+	if *timeout <= 0 || *timeout > maxTimeout {
+		fmt.Printf("Timeout limit (-t) must be between 1 and %d\n", maxTimeout)
 		os.Exit(1)
 	}
 
@@ -59,6 +66,11 @@ func main() {
 	// to only allow N goroutines at a time.
 	var sem = make(chan struct{}, *concurrency)
 
+	// Create a custom http client with the specified timeout
+	client := &http.Client{
+		Timeout: time.Duration(*timeout) * time.Second,
+	}
+
 	// Spawn worker goroutines.
 	for _, url := range urls {
 		wg.Add(1)
@@ -72,7 +84,7 @@ func main() {
 			// to run, even if checkURL panics.
 			defer func() { <-sem }()
 
-			results <- checkURL(url, method)
+			results <- checkURL(url, method, client)
 		}()
 	}
 
@@ -107,7 +119,7 @@ func main() {
 	w.Flush()
 }
 
-func checkURL(url, method string) Result {
+func checkURL(url, method string, client *http.Client) Result {
 	var result Result
 	// Save
 	result.URL = url
@@ -122,7 +134,7 @@ func checkURL(url, method string) Result {
 	// Start the timer.
 	startTime := time.Now()
 	// Execute the HTTP request.
-	res, err := http.DefaultClient.Do(req)
+	res, err := client.Do(req)
 	// Stop the timer and calculate how long it took to execute the request.
 	result.Latency = time.Since(startTime).Round(time.Millisecond)
 
