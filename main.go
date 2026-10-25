@@ -19,15 +19,23 @@ type Result struct {
 	Err        error
 }
 
+var maxConcurrency = 100
+
 func main() {
 	filePath := flag.String("f", "urls.json", "a data file containing target URLs")
 	methodFlag := flag.String("m", "GET", "specifies an HTTP request method to check the URLs (HEAD/GET)")
+	concurrency := flag.Int("c", 10, fmt.Sprintf("maximum number of concurrent HTTP checks (1-%d)", maxConcurrency))
 	flag.Parse()
 
 	method := strings.ToUpper(*methodFlag)
 	// Check the HTTP request method and exit if it isn't GET or HEAD.
 	if method != "GET" && method != "HEAD" {
 		fmt.Println("Unsupported HTTP request method. Use HEAD or GET")
+		os.Exit(1)
+	}
+
+	if *concurrency <= 0 || *concurrency > maxConcurrency {
+		fmt.Printf("Concurrency limit (-c) must be between 1 and %d\n", maxConcurrency)
 		os.Exit(1)
 	}
 
@@ -49,7 +57,7 @@ func main() {
 
 	// Create a semaphore channel to allocate N 0-byte slots
 	// to only allow N goroutines at a time.
-	var sem = make(chan struct{}, 10)
+	var sem = make(chan struct{}, *concurrency)
 
 	// Spawn worker goroutines.
 	for _, url := range urls {
