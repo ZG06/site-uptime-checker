@@ -2,6 +2,7 @@ package main
 
 import (
 	"ZG06/site-uptime-checker/urlparser"
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -23,10 +24,13 @@ var maxConcurrency = 100
 var maxTimeout = 15
 
 func main() {
-	filePath := flag.String("f", "urls.json", "a data file containing target URLs")
+	filePath := flag.String("f", "", "a data file containing target URLs")
 	methodFlag := flag.String("m", "GET", "specifies an HTTP request method to check the URLs (HEAD/GET)")
 	concurrency := flag.Int("c", 10, fmt.Sprintf("maximum number of concurrent HTTP checks (1-%d)", maxConcurrency))
 	timeout := flag.Int("t", 5, fmt.Sprintf("timeout for HTTP requests in seconds (1-%d)", maxTimeout))
+	bucket := flag.String("bucket", "", "AWS S3 bucket name")
+	bucketKey := flag.String("key", "", "key for AWS S3 bucket")
+
 	flag.Parse()
 
 	method := strings.ToUpper(*methodFlag)
@@ -46,7 +50,35 @@ func main() {
 		os.Exit(1)
 	}
 
-	data, err := urlparser.ReadFile(*filePath)
+	// Exit if neither a local file nor a remote bucket are specified.
+	if *filePath != "" && *bucket != "" {
+		fmt.Println("Cannot specify both local file (-f) and S3 bucket (-bucket)")
+		os.Exit(1)
+	}
+
+	// Exit if both a local file and a remote bucket are specified.
+	if *filePath == "" && *bucket == "" {
+		fmt.Println("Must specify either a local file (-f) or an S3 bucket (-bucket)")
+		os.Exit(1)
+	}
+
+	// Exit if bucket key is not specified.
+	if *bucket != "" && *bucketKey == "" {
+		fmt.Println("Must specify -key when using -bucket")
+		os.Exit(1)
+	}
+
+	var data []byte
+	var err error
+
+	if *filePath != "" {
+		// If local file path provided, read from it.
+		data, err = urlparser.ReadFile(*filePath)
+	} else {
+		// Otherwise, read from the provided S3 bucket.
+		data, err = urlparser.FetchS3Data(context.Background(), *bucket, *bucketKey)
+	}
+
 	if err != nil {
 		fmt.Println("Error reading file", err)
 		os.Exit(1)
