@@ -1,0 +1,15 @@
+# Git metadata
+.git
+.gitignore
+
+# Compiled local binaries
+checker
+*.exe
+
+# Local configuration / environment files
+.env
+*.pem
+
+# Documentation and temporary files
+*.md
+tmp/
