@@ -1,0 +1,72 @@
+name: Build, Test, and Deploy Site Checker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Fetch repository source code
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      # Step 2: Setup Go & Run Unit Tests
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.2'
+
+      - name: Run Go Tests
+        run: go test -v ./...
+
+      # Step 3: Authenticate with AWS ECR
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Step 4: Build, Tag, and Push Container Image to ECR
+      - name: Build and Push Docker Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: site-checker
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # Step 5: SSH into EC2 to Pull & Deploy Latest Container
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Authenticate Docker on EC2 to ECR using EC2 Instance Profile credentials
+            aws ecr get-login-password --region eu-central-1 | sudo docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com
+            
+            # Pull latest image
+            sudo docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/site-checker:latest
+            
+            # Stop existing container if running
+            sudo docker stop site-checker || true
+            sudo docker rm site-checker || true
+            
+            # Run updated container against S3 bucket
+            sudo docker run -d --rm \
+              --name site-checker \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/site-checker:latest \
+              --bucket site-checker-urls-bucket \
+              --key urls.json
