@@ -46,7 +46,21 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      # Step 5: SSH into EC2 to Pull & Deploy Latest Container
+      # Step 5: Authorize GitHub Runner IP in AWS Security Group
+      - name: Get GitHub Runner Public IP
+        id: ip
+        run: echo "runner_ip=$(curl -s https://checkip.amazonaws.com)" >> $GITHUB_OUTPUT
+
+      - name: Authorize Inbound SSH in Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-name site_checker_sg \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.runner_ip }}/32 \
+            --region eu-central-1
+
+      # Step 6: SSH into EC2 to Pull & Deploy Latest Container
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.5
         with:
@@ -70,3 +84,14 @@ jobs:
               ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/site-checker:latest \
               --bucket site-checker-urls-bucket \
               --key urls.json
+
+      # Step 7: Clean Up Security Group Rule (Runs even if deployment fails)
+      - name: Revoke Inbound SSH from Security Group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-name site_checker_sg \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.runner_ip }}/32 \
+            --region eu-central-1
