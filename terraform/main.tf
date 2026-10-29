@@ -68,7 +68,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.my_ip] # Replace with your specific IP (e.g. "x.x.x.x/32") for better security
+    cidr_blocks = [var.my_ip]
   }
 
   # Outbound rule (allows EC2 to reach ECR, S3, and public URLs)
