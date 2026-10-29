@@ -1,0 +1,100 @@
+# ==========================================
+# Operating System & IDE Files
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors & IDEs (VS Code, JetBrains / GoLand)
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+
+# ==========================================
+# Go Binaries & Local Builds
+# ==========================================
+# Compiled binaries (e.g., site-checker)
+/site-checker
+/checker
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test / Coverage outputs
+*.out
+*.test
+*.prof
+coverage.txt
+
+# Dependency vendor directory (if used)
+# vendor/
+
+# ==========================================
+# Local Data & Test Credentials
+# ==========================================
+# Local URLs or test files containing private endpoints
+# urls.json  # Uncomment if urls.json contains sensitive/private URLs
+
+# AWS Credentials, SSH Keys, and Environment Variables
+*.pem
+*.key
+*.pub
+aws_credentials
+.env
+.env.*
+
+# ==========================================
+# Docker & Containers
+# ==========================================
+# Local docker environment logs or build contexts
+.docker/
+
+# ==========================================
+# Terraform (Infrastructure as Code)
+# ==========================================
+# Local state files (Contains full infrastructure state & sensitive data)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Terraform plugin directory
+.terraform/
+
+# Terraform lock file overrides / local vars
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ==========================================
+# Python (For automation / upload scripts)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+.pytest_cache/
