@@ -56,7 +56,7 @@ jobs:
       - name: Authorize Inbound SSH in Security Group
         run: |
           aws ec2 authorize-security-group-ingress \
-            --group-name site_checker_sg \
+            --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} \
             --protocol tcp \
             --port 22 \
             --cidr ${{ steps.ip.outputs.runner_ip }}/32 \
