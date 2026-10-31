@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  # Enable manual dispatch via gh CLI
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
