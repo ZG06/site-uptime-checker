@@ -14,3 +14,15 @@ variable "bucket_name" {
   description = "Unique name for the S3 bucket storing urls.json"
   default     = "my-site-checker-urls-bucket-192837" # Change to a unique name
 }
+
+variable "key_name" {
+  type = string
+  description = "SSH key name"
+  default = ""
+}
+
+variable "public_key_string" {
+  type = string
+  description = "SSH public key value"
+  default = ""
+}

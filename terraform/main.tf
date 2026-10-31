@@ -80,13 +80,18 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
+resource "aws_key_pair" "deployer" {
+  key_name = var.key_name
+  public_key = var.public_key_string
+}
+
 # Spin up an EC2 Instance
 resource "aws_instance" "site_checker_vm" {
   ami = data.aws_ami.amazon_linux.id
   instance_type = "t3.micro"
   iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  key_name = "my-ec2-key"
+  key_name = aws_key_pair.deployer.key_name
 
   # Boot script that runs as soon as the VM boots up
   user_data = <<-EOF
